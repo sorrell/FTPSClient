@@ -1077,6 +1077,14 @@ namespace AlexPilotti.FTPS.Client
             RntoCmd(remoteFileNameTo);
         }
 
+        public bool bRenameFile(string remoteFileNameFrom, string remoteFileNameTo)
+        {
+            bool success = true;
+            if (success &= bRnfrCmd(remoteFileNameFrom))
+                success &= bRntoCmd(remoteFileNameTo);
+            return success;
+        }
+
         /// <summary>
         /// Creates the given remote directory.
         /// </summary>
@@ -1764,7 +1772,7 @@ namespace AlexPilotti.FTPS.Client
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private FTPReply HandleCmd(string command, bool waitForAnswer)
+        private FTPReply HandleCmd(string command, bool waitForAnswer, bool throwOnReplyOver400 = true)
         {
             CheckConnection();
             CheckCommandInjection(command);
@@ -1779,7 +1787,7 @@ namespace AlexPilotti.FTPS.Client
             if (LogCommand != null)
                 LogCommand(this, new LogCommandEventArgs(command));
 
-            return waitForAnswer ? GetReply() : null;
+            return waitForAnswer ? GetReply(throwOnReplyOver400) : null;
         }
 
         private void CheckConnection()
@@ -1810,7 +1818,7 @@ namespace AlexPilotti.FTPS.Client
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private FTPReply GetReply()
+        private FTPReply GetReply(bool throwOnReplyOver400 = true)
         {
             try
             {
@@ -1857,7 +1865,7 @@ namespace AlexPilotti.FTPS.Client
                 if (LogServerReply != null)
                     LogServerReply(this, new LogServerReplyEventArgs(reply));
 
-                if (reply.Code >= 400)
+                if ((reply.Code >= 400) && throwOnReplyOver400)
                     throw new FTPCommandException(reply);
 
                 return reply;
@@ -2084,6 +2092,41 @@ namespace AlexPilotti.FTPS.Client
             HandleCmd("NOOP");
         }
 
+        #endregion
+
+        #region Boolean, less exceptional methods
+
+        /// <summary>
+        /// bRnfrCmd returns true if the RNFR command is successful.
+        /// This method is an alternative to the library's RnfrCmd and is used
+        /// when a boolean return value is needed.
+        /// The successful server return code is 350 (Requested file action pending further information), so we check for that.
+        /// </summary>
+        /// <param name="fileName">Existing file.</param>
+        /// <returns>true if able to rename, false if not</returns>
+        private bool bRnfrCmd(string fileName)
+        {
+            bool success = false;
+            FTPReply reply = HandleCmd("RNFR " + fileName, true, false);
+            if (reply.Code == 350)
+                success = true;
+            return success;
+        }
+
+        /// <summary>
+        /// bRntoCmd returns true if the RNTO command is successful.
+        /// The successful server return code is 250 (Requested file action okay, completed.), so we check for that!
+        /// </summary>
+        /// <param name="fileNewName">New filename</param>
+        /// <returns>true if renamed, false if not</returns>
+        private bool bRntoCmd(string fileNewName)
+        {
+            bool success = false;
+            FTPReply reply = HandleCmd("RNTO " + fileNewName, true, false);
+            if (reply.Code == 250)
+                success = true;
+            return success;
+        }
         #endregion
 
         #region RFC 2228
