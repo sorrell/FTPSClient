@@ -421,6 +421,14 @@ namespace AlexPilotti.FTPS.Client
             return Connect(hostname, port, credential, sslSupportMode, userValidateServerCertificate, null, 0, 0, 0, null);
         }
 
+        public string Connect(string hostname, NetworkCredential credential, ESSLSupportMode sslSupportMode,
+                            RemoteCertificateValidationCallback userValidateServerCertificate, EDataConnectionMode dataMode)
+        {
+            // Default implicit FTPS port is 990, default standard and explicit FTPS port is 21
+            int port = (sslSupportMode & ESSLSupportMode.Implicit) == ESSLSupportMode.Implicit ? 990 : 21;
+            return Connect(hostname, port, credential, sslSupportMode, userValidateServerCertificate, null, 0, 0, 0, null, true, dataMode);
+        }
+
         /// <summary>
         /// Connects to a FTP server using the provided parameters. 
         /// The default representation tipe is set to Binary.
@@ -1070,13 +1078,20 @@ namespace AlexPilotti.FTPS.Client
         /// <summary>
         /// Renames the given remote file.
         /// </summary>
-        /// <param name="remoteDirName"></param>
+        /// <param name="remoteFileNameFrom"></param>
+        /// <param name="remoteFileNameTo"></param>
         public void RenameFile(string remoteFileNameFrom, string remoteFileNameTo)
         {
             RnfrCmd(remoteFileNameFrom);
             RntoCmd(remoteFileNameTo);
         }
 
+        /// <summary>
+        /// Renames the given remote file and provides boolean return.
+        /// </summary>
+        /// <param name="remoteFileNameFrom"></param>
+        /// <param name="remoteFileNameTo"></param>
+        /// <returns>true if renamed, false if not</returns>
         public bool bRenameFile(string remoteFileNameFrom, string remoteFileNameTo)
         {
             bool success = true;
